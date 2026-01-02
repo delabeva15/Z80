@@ -1,0 +1,459 @@
+;Friday, October 25, 2024
+;4:38 PM
+;NOTE: Sometimes comments mess with code function so I had to remove the majority of the comments, it's really unfortuante. 
+
+#include    "ti83plus.inc"
+#define     progStart   $9D95
+.org        progStart-2
+.db         $BB,$6D
+
+downVal .EQU 12
+Collumns .EQU 5 ;prefered size of 5x3, build slot for it. 
+Rows .EQU 3
+realWaitVal .EQU 2100
+startingPos .EQU plotSScreen+73
+
+setup:
+	ld bc,symbolList
+    
+	ld a,Rows
+    ld (rowCount),a
+    
+    ld a,Collumns
+    ld (colCount),a
+    
+    ld de,startingPos
+    ld (savePos),de
+    
+    ld hl,(waitVal)
+    ld (ooohVal),hl
+    
+    ld a,0
+    ld (flagger),a
+    
+;----NEXT_SYMBOL----NEXT_SYMBOL----NEXT_SYMBOL----NEXT_SYMBOL----NEXT_SYMBOL----NEXT_SYMBOL
+
+;randomSymbol fetches a random number 0-32 and stores in into a. 
+randomSymbol:
+	ld hl,picture
+	call random
+    and %00011111
+    push bc ;bc loaded with outputted symbols
+    push de ;de is used to save positions
+    ld de,rarity 
+    
+symbolChoose:
+    push af
+    ld a,(de)
+    ld b,a
+    inc de
+    pop af
+    
+rarityLoop:
+    cp 0
+    jr z,printingSymbol
+    dec a
+    djnz rarityLoop
+    ld bc,6
+    add hl,bc
+    jr symbolChoose
+    
+printingSymbol:
+	ld a,(hl)
+    cp %00011000
+    jr z,activeFlag
+    jr simplyCont
+    
+activeFlag:
+	ld a,(flagger)
+    inc a
+    ld (flagger),a
+
+simplyCont:
+	pop de
+    pop bc
+	ld a,(hl)
+    ld (bc),a
+    inc bc
+	push bc 
+    ld b,6
+    call printSymbol
+    push de 
+    bcall(_GrBufCpy)
+    ld hl,1650 
+    ld de,(ooohVal) 
+    ld b,2
+    
+flagging:
+	ld a,(flagger) 
+    cp b
+    jp z,slowing
+    inc b
+    ld a,b
+    cp 10 
+    jr nz,flagging
+    ld bc,(waitVal)
+    
+waitingAndDown:
+    call waiting 
+    ld b,downVal
+    pop de
+    call moveDownMany
+    pop bc
+    call compareRows
+    jr nz,randomSymbol
+    ld de,(savePos)
+    inc de 
+    inc de
+    ld (savePos),de
+	
+resetingNumbers: 
+    ld a,Rows
+  	ld (rowCount),a
+    call compareCollumns              
+    jr nz,randomSymbol
+    ld a,Collumns      
+    ld (colCount),a
+    
+;----MATCHING----MATCHING----MATCHING----MATCHING----MATCHING----MATCHING----MATCHING----MATCHING
+firstCompareSetup:   
+    ld c,5
+    ld b,3 
+    ld hl,symbolList 
+    ld a,(hl)  
+    
+comparingNumbers:
+    inc hl 
+    inc hl 
+    inc hl
+    cp (hl)
+    jr nz,endOfMatchDetected
+    dec c 
+    jr comparingNumbers
+    
+endOfMatchDetected:
+	push hl
+    push bc
+    push af
+    
+	ld a,c
+    cp 3
+    jr z,threePair
+    cp 2
+    jr z,fourPair
+    cp 1
+    jr z,fullLine
+    jr noPair
+
+fullLine:
+	ld a,10
+	call coolMatchGraphics
+	jr noPair
+
+fourPair:
+	ld a,7
+	call coolMatchGraphics
+	jr noPair
+
+threePair:
+	ld a,5
+	call coolMatchGraphics
+	jr noPair
+
+noPair:
+	pop af
+    pop bc
+    pop hl
+	ld c,5
+    ld hl,symbolList
+    dec b
+    ld a,b
+    cp 0
+    jr nz,nextCheck
+    jr nextSpin 
+    
+nextCheck:
+	inc hl
+    inc a
+    cp 3
+    jr nz,nextCheck
+    ld a,(hl)
+    jr comparingNumbers
+    
+;----PREPARING_4_NEXT_SPIN----PREPARING_4_NEXT_SPIN----PREPARING_4_NEXT_SPIN----PREPARING_4_NEXT
+nextSpin:
+    bcall(_GrBufCpy)
+    bcall(_GetKey)     
+    cp skEnter
+    ret z
+    
+    cp skRight ;up arrow key?!? 
+    jp z,speedSettingDebug
+    
+    cp skUp ;down?????
+    call z,speedSettingTwo
+    
+clearsLines:
+    ld de,plotSScreen+110
+    ld b,4
+    call goLines
+    
+    ld de,plotSScreen+326
+    ld b,4
+    call goLines
+    
+    ld de,plotSScreen+542
+    ld b,4
+    call goLines
+    
+    ld de,startingPos
+    ld (savePos),de	
+
+placeHolderFill:
+    ld hl,placeHolder
+    ld b,6
+    call printSymbol
+    ld b,downVal
+    call moveDownMany
+    
+    push de
+    ld bc,(waitVal)
+    call waiting
+    bcall(_GrBufCpy)
+    pop de
+    
+    call compareRows
+    jr nz,placeHolderFill
+    
+    ld a,Rows
+    ld (rowCount),a
+    
+    ld de,(savePos)
+    inc de
+    inc de
+    ld (savePos),de
+    
+    call compareCollumns
+    jr nz,placeHolderFill
+    jp setup          
+
+;----ALL_CALLS----ALL_CALLS----ALL_CALLS----ALL_CALLS----ALL_CALLS----ALL_CALLS----ALL_CALLS
+goLines:
+	xor a
+	ld (de),a
+    inc de
+    inc de
+    djnz goLines
+    ret
+
+coolMatchGraphics:
+	ld (matchType),a
+	ld a,b
+    cp 3
+    call z,topRowMatch
+    cp 2
+    call z,middleRowMatch
+    cp 1
+    call z,bottomRowMatch
+    ld a,(matchType)
+    ld b,a
+    ld a,%11111111
+    call fillerUp
+    ret
+
+topRowMatch:
+	ld de,plotSScreen+109
+    ret
+
+middleRowMatch:
+	ld de,plotSScreen+325
+    ret
+    
+bottomRowMatch:
+	ld de,plotSScreen+541
+    ret
+    
+fillerUp:
+	ld (de),a
+    inc de
+    djnz fillerUp
+    ld a,0
+    ld (matchType),a
+    ret
+    
+speedSettingDebug:
+    ld hl,1
+    ld (waitVal),hl
+    jp setup
+    
+speedSettingTwo:
+    ld hl,realWaitVal
+    ld (waitVal),hl
+    ret
+
+waiting:
+	dec bc
+    push bc
+    pop bc
+    ld a,b
+    or c
+    cp 0
+    jr nz,waiting
+    ret
+    
+printSymbol:
+    ld a,(hl)
+	ld (de),a
+    ld a,12
+    call moveDownOne
+    inc hl
+    djnz printSymbol
+    ret
+    
+moveDownOne:
+    inc de
+    dec a
+    cp 0
+    jr nz,moveDownOne
+    ret
+    
+moveDownMany:
+	ld a,12
+    call moveDownOne
+    djnz moveDownMany
+    ret
+
+random:	
+	push hl
+	push de
+	ld hl, (seed1)  
+	ld a, r
+	ld d, a
+	ld e, (hl)
+	add hl, de
+	add a, l
+	xor h
+	ld (seed1), hl
+	pop de
+	pop hl
+    ret
+
+compareRows:
+	ld a,(rowCount)
+    dec a
+    ld (rowCount),a
+    cp 0
+	ret
+    
+compareCollumns:
+	ld a,(colCount)
+    dec a
+    ld (colCount),a
+    cp 0
+	ret
+    
+slowing:
+    inc de
+    dec hl
+    ld a,h
+    or l
+    cp 0
+    jr nz,slowing
+    ld (ooohVal),de
+    ld bc,(ooohVal)
+    jp waitingAndDown
+
+;----ALL_DATA----ALL_DATA----ALL_DATA----ALL_DATA----ALL_DATA----ALL_DATA----ALL_DATA----ALL_DATA
+waitVal:
+	.dw realWaitVal
+    
+matchType:
+	.db 0
+    
+ooohVal:
+	.dw 3000
+    
+flagger:
+	.db 0
+    
+colCount:
+	.db Collumns
+    
+rowCount:
+	.db Rows
+
+savePos:
+	.dw 0
+
+rarity:
+	.db 2, 7, 6, 5, 4, 4, 3, 1
+
+picture:
+;egg
+   .db %00011000
+   .db %00111100
+   .db %01101110
+   .db %01111010
+   .db %01011110
+   .db %00111100
+;milk
+   .db %00111100
+   .db %01000010
+   .db %01111110
+   .db %01111110
+   .db %01111110
+   .db %00111100
+;fish
+   .db %00001110
+   .db %00011110
+   .db %00111100
+   .db %00111000
+   .db %11110000
+   .db %00010000  
+;shell
+   .db %11100000
+   .db %11111000
+   .db %01111110
+   .db %00111001
+   .db %00011001
+   .db %00001110 
+;mush
+   .db %01111100
+   .db %11111111
+   .db %11111111
+   .db %00011000
+   .db %00011000
+   .db %00011000
+;cherry
+  .db %00010000
+  .db %00101000
+  .db %00100100
+  .db %01110110
+  .db %11111111
+  .db %01110111
+;diamond
+  .db %00000000
+  .db %01111100
+  .db %11111110
+  .db %01111100
+  .db %00111000
+  .db %00010000
+;stardrop
+  .db %00010100
+  .db %00001000
+  .db %01011101
+  .db %00111110
+  .db %00011100
+  .db %01110111
+
+symbolList:
+	.db 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+
+placeHolder:
+;the placeholder HAS to be RIGHT HERE
+  .db %10000001
+  .db %00000000
+  .db %00000000
+  .db %00000000
+  .db %00000000
+  .db %10000001

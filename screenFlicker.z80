@@ -1,0 +1,39 @@
+#include    "ti83plus.inc"
+#define     progStart   $9D95
+.org        progStart-2
+.db         $BB,$6D
+   
+    bcall(_ClrLCDFull)
+    call reset
+    
+black:
+    ld a,%11111111
+    call copyCheck
+    jr nz,black
+    bcall(_GrBufCpy)
+    call reset
+    
+clear:
+    ld a,%00000000
+    call copyCheck
+    jr nz,clear
+    bcall(_GetCSC)
+    cp skEnter
+    ret z
+    bcall(_GrBufCpy)
+    call reset
+    jr black
+
+copyCheck:
+    ld (de),a
+    inc de
+    dec bc
+    ld a,b
+    or c
+    cp 0
+    ret
+    
+reset:
+    ld de,plotSScreen
+    ld bc,768
+    ret

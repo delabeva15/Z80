@@ -1,0 +1,64 @@
+#include    "ti83plus.inc"
+#define     progStart   $9D95
+.org        progStart-2
+.db         $BB,$6D
+
+initialise:
+    bcall(_ClrLCDFull)
+    ld hl,list
+    ld (listStart),hl
+    ld de,(listStart)
+    ld a,(curRow)
+    dec a
+    ld (curRow),a
+
+main:
+	ld b,5
+    ld hl,(listStart) ;store the start of the list here
+    call disp
+    call curColReset
+    
+increase:
+    ld a,(hl) ;increase a by 1, load it back into hl
+    inc a
+    ld (hl),a
+    cp 58
+    jr nz,main
+    ld a,48 
+    ld (hl),a
+    dec hl
+	ld a,e
+    cp l
+    jr nz,increase
+    ld a,(hl)
+    cp 57
+    jr nz,increase
+    bcall(_ClrLCDFull)
+	ret
+    
+disp:
+	ld a,(hl)
+    bcall(_PutC)
+    inc hl
+    djnz disp
+    dec hl
+    ret
+
+curColReset:
+	ld a,(curCol)
+    dec a 
+    dec a
+    dec a
+    dec a
+    dec a
+    ld (curCol),a
+    ret
+    
+list:
+	.db 48, 48, 48, 48, 48
+    
+listStart:
+	.db 0
+    
+.end
+.end

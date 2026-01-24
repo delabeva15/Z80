@@ -5,3 +5,5 @@ AND CORRUPTION IS REAL!! I have bricked one of my calculators entirely after run
 
 As for TIBASIC, feel free to run them! No corruption will occur, and that's a guarantee.
 Note: Most of my programs were lost after corruption so what you see here is a very small fraction of the programs I developed over the course of 4 years (2020-2024).
+
+I had developed an entire suite of games under the name of TICasino and resort- it included blackjack, slot machines, keno, and plans for poker and bingo. And then the batteries failed. I would've loved to share those programs and I am still saddend to this day of their corruption and disapearance from my life. The slotMachine program was the final program I made on the TI83+ in TIBASIC and it stands as my magnum opus in all of my programming- despite it's unprofessional nature. It is- when examining the code- (which you have to download and analyze via a TI83+) an incredible work of low level engineering and effiency, in fact, the development of TIBASIC code is what had led me to my journies in z80 assembly as a way of seeking faster processing power and greater possibilities not seen in TIBASIC. 

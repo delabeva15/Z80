@@ -4,3 +4,4 @@ assembly is very risky to run on an actual device if not tested thoroughly, if y
 AND CORRUPTION IS REAL!! I have bricked one of my calculators entirely after running bad code on it. These programs on here should be alright but have not been fully tested so again, run at your own risk if you choose to do so.
 
 As for TIBASIC, feel free to run them! No corruption will occur, and that's a guarantee.
+Note: Most of my programs were lost after corruption so what you see here is a very small fraction of the programs I developed over the course of 4 years (2020-2024).
